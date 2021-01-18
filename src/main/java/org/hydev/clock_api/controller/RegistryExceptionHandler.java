@@ -15,8 +15,8 @@ public class RegistryExceptionHandler {
     @ExceptionHandler(ConstraintViolationException.class)
     // ConstraintViolationException will be wrapped to TransactionSystemException!
     // https://stackoverflow.com/questions/45070642/springboot-doesnt-handle-org-hibernate-exception-constraintviolationexception
-    private ResponseEntity<List<String>> handleConstraintViolationException(ConstraintViolationException tse) {
-        List<String> errorMessages = tse.getConstraintViolations().stream()
+    private ResponseEntity<List<String>> handleConstraintViolationException(ConstraintViolationException cve) {
+        List<String> errorMessages = cve.getConstraintViolations().stream()
                 .map(ConstraintViolation::getMessage).sorted()
                 .collect(Collectors.toList());
 
