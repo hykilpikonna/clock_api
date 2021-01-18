@@ -37,9 +37,11 @@ import javax.validation.ConstraintViolationException
 
 // https://spring.io/guides/gs/testing-web/
 @AutoConfigureMockMvc
-class RegisterNodeTest {
+class UserRegisterDeleteNodeTest {
     companion object {
-        private const val TEST_NODE = "/register"
+        private const val TEST_NODE = "/user"
+        private const val REGISTER_NODE = "${TEST_NODE}/register"
+        private const val DELETE_NODE = "${TEST_NODE}/delete"
 
         private const val H_USERNAME = "username"
         private const val V_USERNAME = "vanilla"
@@ -61,16 +63,17 @@ class RegisterNodeTest {
     @Autowired
     private lateinit var restTemplate: TestRestTemplate
 
-    // Post with headers, expect 406 and ErrorCodes.
+    // Post to register node with headers, expect 406 and ErrorCodes.
     // todo: Using List instead of Array.
-    private fun pWHsE406AECs(headerMap: Map<String, String>, expectedECList: Array<String>) {
+    private fun pTRWHsE406AECs(headerMap: Map<String, String>, expectedECList: Array<String>) {
         val tempMultiValueMap = LinkedMultiValueMap<String, String>()
         headerMap.forEach { tempMultiValueMap[it.key] = listOf(it.value) }
         val httpEntity = HttpEntity<String>(tempMultiValueMap)
 
         // Using exchange to custom headers, etc. Args: (node, method, headers, forObject).
         // https://stackoverflow.com/questions/16781680/http-get-with-headers-using-resttemplate
-        val responseEntity = restTemplate.exchange(TEST_NODE, HttpMethod.POST, httpEntity, Array<String>::class.java)
+        val responseEntity =
+            restTemplate.exchange(REGISTER_NODE, HttpMethod.POST, httpEntity, Array<String>::class.java)
 
         // Expect http status is 406 NOT ACCEPTABLE, and ErrorCode array are same.
         assertEquals(HttpStatus.NOT_ACCEPTABLE, responseEntity.statusCode)
@@ -80,17 +83,17 @@ class RegisterNodeTest {
     @Test
     // [A0101, A0102, A0101 + A0102] M1 * 2 + M2.
     fun testWhenMissingField() {
-        pWHsE406AECs(mapOf(H_PASSWORD to V_PASSWORD), arrayOf(USER_NAME_IS_NULL))
-        pWHsE406AECs(mapOf(H_USERNAME to V_USERNAME), arrayOf(USER_PASSWORD_IS_NULL))
-        pWHsE406AECs(mapOf(), arrayOf(USER_NAME_IS_NULL, USER_PASSWORD_IS_NULL))
+        pTRWHsE406AECs(mapOf(H_PASSWORD to V_PASSWORD), arrayOf(USER_NAME_IS_NULL))
+        pTRWHsE406AECs(mapOf(H_USERNAME to V_USERNAME), arrayOf(USER_PASSWORD_IS_NULL))
+        pTRWHsE406AECs(mapOf(), arrayOf(USER_NAME_IS_NULL, USER_PASSWORD_IS_NULL))
     }
 
     @Test
     // [A0111, A0112, A0111 + A0112] W1 * 2 + W2.
     fun testWhenNotMatchRegex() {
-        pWHsE406AECs(mapOf(H_USERNAME to "", H_PASSWORD to V_PASSWORD), arrayOf(USER_NAME_NOT_MATCH_REGEX))
-        pWHsE406AECs(mapOf(H_USERNAME to V_USERNAME, H_PASSWORD to ""), arrayOf(USER_PASSWORD_NOT_MATCH_REGEX))
-        pWHsE406AECs(
+        pTRWHsE406AECs(mapOf(H_USERNAME to "", H_PASSWORD to V_PASSWORD), arrayOf(USER_NAME_NOT_MATCH_REGEX))
+        pTRWHsE406AECs(mapOf(H_USERNAME to V_USERNAME, H_PASSWORD to ""), arrayOf(USER_PASSWORD_NOT_MATCH_REGEX))
+        pTRWHsE406AECs(
             mapOf(H_USERNAME to "", H_PASSWORD to ""),
             arrayOf(USER_NAME_NOT_MATCH_REGEX, USER_PASSWORD_NOT_MATCH_REGEX)
         )
@@ -99,13 +102,13 @@ class RegisterNodeTest {
     @Test
     // [A0121] Insert user, check it if already exists.
     fun testWhenUserAlreadyExists() {
-        mockMvc.perform(post(TEST_NODE).header(H_USERNAME, V_USERNAME).header(H_PASSWORD, V_PASSWORD))
+        mockMvc.perform(post(REGISTER_NODE).header(H_USERNAME, V_USERNAME).header(H_PASSWORD, V_PASSWORD))
             .andExpect(status().isOk)
             .andExpect(content().string(Matchers.matchesPattern(R_UUID)))
             .andDo { result: MvcResult ->
                 // Notice: inserted user should be delete.
                 val tempUuid = result.response.contentAsString
-                mockMvc.perform(post(TEST_NODE).header(H_USERNAME, V_USERNAME).header(H_PASSWORD, V_PASSWORD))
+                mockMvc.perform(post(REGISTER_NODE).header(H_USERNAME, V_USERNAME).header(H_PASSWORD, V_PASSWORD))
                     .andExpect(status().isNotAcceptable)
                     .andExpect(content().json(String.format("[\"%s\"]", USER_NAME_ALREADY_EXISTS)))
                 userRepository.deleteById(tempUuid)
@@ -142,5 +145,35 @@ class RegisterNodeTest {
             User().apply { username = ""; passwordMd5 = "" },
             setOf(INNER_USERNAME_NOT_MATCH_REGEX, INNER_PASSWORD_MD5_NOT_MATCH_REGEX)
         )
+    }
+
+    // Post to delete node with headers and expect HttpStatus.
+    private fun pTDWHsAEHS(headerMap: Map<String, String>, expectedHttpStatus: HttpStatus) {
+        val tempMultiValueMap = LinkedMultiValueMap<String, String>()
+        headerMap.forEach { tempMultiValueMap[it.key] = listOf(it.value) }
+        val httpEntity = HttpEntity<String>(tempMultiValueMap)
+
+        val responseEntity = restTemplate.exchange(DELETE_NODE, HttpMethod.POST, httpEntity, String::class.java)
+        assertEquals(expectedHttpStatus, responseEntity.statusCode)
+    }
+
+    @Test
+    fun testDeleteUser() {
+        mockMvc.perform(post(REGISTER_NODE).header(H_USERNAME, V_USERNAME).header(H_PASSWORD, V_PASSWORD))
+            .andExpect(status().isOk)
+            .andExpect(content().string(Matchers.matchesPattern(R_UUID)))
+            .andDo {
+                // Missing headers, 400 bad request.
+                pTDWHsAEHS(mapOf(H_USERNAME to ""), HttpStatus.BAD_REQUEST)
+                // Username not exist, 404 not found.
+                pTDWHsAEHS(mapOf(H_USERNAME to "", H_PASSWORD to ""), HttpStatus.NOT_FOUND)
+                // Username exist, but password not match. 401 unauthorized.
+                pTDWHsAEHS(mapOf(H_USERNAME to V_USERNAME, H_PASSWORD to ""), HttpStatus.UNAUTHORIZED)
+                // Username & password matched, delete user and 200 ok.
+                pTDWHsAEHS(mapOf(H_USERNAME to V_USERNAME, H_PASSWORD to V_PASSWORD), HttpStatus.OK)
+
+                // And assert user is gone.
+                assertEquals(false, userRepository.existsByUsername(V_USERNAME))
+            }
     }
 }

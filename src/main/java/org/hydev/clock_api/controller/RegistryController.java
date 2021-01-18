@@ -4,12 +4,13 @@ import org.hydev.clock_api.entity.User;
 import org.hydev.clock_api.error.ErrorCode;
 import org.hydev.clock_api.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.DigestUtils;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.validation.constraints.NotNull;
@@ -17,6 +18,7 @@ import javax.validation.constraints.Pattern;
 
 @Validated
 @RestController
+@RequestMapping("/user")
 public class RegistryController {
     private final UserRepository userRepository;
 
@@ -43,12 +45,29 @@ public class RegistryController {
 
         User user = new User();
         user.setUsername(username);
-
-        // TODO: Using Spring Security instead.
-        user.setPasswordMd5(DigestUtils.md5DigestAsHex(password.getBytes()).toLowerCase());
+        user.setPasswordMd5(userToSaltedMd5(username, password));
 
         // After save and flush, uuid field will be generated automatically.
         userRepository.saveAndFlush(user);
         return ResponseEntity.ok(user.getUuid());
+    }
+
+    // Format: "$username + $password".toLowerMd5();
+    private String userToSaltedMd5(String username, String password) {
+        String beforeMd5 = String.format("%s + %s", username, password);
+        return DigestUtils.md5DigestAsHex(beforeMd5.getBytes()).toLowerCase();
+    }
+
+    @PostMapping("/delete")
+    public synchronized ResponseEntity<String> delete(@RequestHeader String username, @RequestHeader String password) {
+        User user = userRepository.queryByUsername(username);
+        if (user == null) return ResponseEntity.notFound().build();
+
+        if (user.getPasswordMd5().equals(userToSaltedMd5(username, password))) {
+            userRepository.delete(user);
+            return ResponseEntity.ok("");
+        }
+
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("");
     }
 }
