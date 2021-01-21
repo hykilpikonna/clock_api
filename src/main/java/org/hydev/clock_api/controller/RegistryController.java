@@ -36,9 +36,9 @@ public class RegistryController {
             // [!] @RequestHeader(required = false) makes no need make another error handler.
             // [!] And also, ExceptionHandler of MissingRequestHeaderException cannot deal with all missing fields.
             @Pattern(regexp = User.RE_USERNAME, message = ErrorCode.USER_NAME_NOT_MATCH_REGEX)
-            @NotNull(message = ErrorCode.USER_NAME_IS_NULL) @RequestHeader(required = false) String username,
+            @RequestHeader String username,
             @Pattern(regexp = User.RE_PASSWORD, message = ErrorCode.USER_PASSWORD_NOT_MATCH_REGEX)
-            @NotNull(message = ErrorCode.USER_PASSWORD_IS_NULL) @RequestHeader(required = false) String password
+            @RequestHeader String password
     ) {
         // First, spring will check args. If not pass there regex, raise ConstraintViolationException.
         // Then, the aspect will check username if already exists.

@@ -4,14 +4,16 @@ import org.hamcrest.Matchers
 import org.hydev.clock_api.entity.User
 import org.hydev.clock_api.error.ErrorCode.*
 import org.hydev.clock_api.repository.UserRepository
-import org.junit.jupiter.api.Assertions.*
+import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertThrows
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.boot.test.context.SpringBootTest.*
+import org.springframework.boot.test.context.SpringBootTest.WebEnvironment
 import org.springframework.boot.test.web.client.TestRestTemplate
 import org.springframework.http.HttpEntity
+import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpMethod
 import org.springframework.http.HttpStatus
 import org.springframework.test.context.ActiveProfiles
@@ -22,7 +24,6 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.content
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import org.springframework.util.DigestUtils
 import org.springframework.util.LinkedMultiValueMap
-import java.util.*
 import javax.validation.ConstraintViolationException
 
 // https://stackoverflow.com/questions/59097035/springboottest-vs-webmvctest-datajpatest-service-unit-tests-what-is-the-b
@@ -63,39 +64,51 @@ class UserRegisterDeleteNodeTest {
     @Autowired
     private lateinit var restTemplate: TestRestTemplate
 
+    private fun Map<String, String>.headersToHttpEntity(): HttpEntity<String> {
+        val tempMultiValueMap = LinkedMultiValueMap<String, String>()
+        this.forEach { tempMultiValueMap[it.key] = listOf(it.value) }
+        return HttpEntity<String>(tempMultiValueMap)
+    }
+
+    private fun Map<String, String>.toHttpHeaders(): HttpHeaders {
+        val linkedMultiValueMap = LinkedMultiValueMap<String, String>()
+        this.forEach { linkedMultiValueMap.add(it.key, it.value) }
+        return HttpHeaders(linkedMultiValueMap)
+    }
+
     // Post to register node with headers, expect 406 and ErrorCodes.
     // todo: Using List instead of Array.
-    private fun pTRWHsE406AECs(headerMap: Map<String, String>, expectedECList: Array<String>) {
-        val tempMultiValueMap = LinkedMultiValueMap<String, String>()
-        headerMap.forEach { tempMultiValueMap[it.key] = listOf(it.value) }
-        val httpEntity = HttpEntity<String>(tempMultiValueMap)
+    private fun pTRWHsE406AECs(headerMap: Map<String, String>, expectedECList: List<String>) {
+        mockMvc.perform(post(REGISTER_NODE).headers(headerMap.toHttpHeaders()))
+            .andExpect(status().isNotAcceptable)
+            .andExpect(content().json(expectedECList.toString()))
+    }
 
-        // Using exchange to custom headers, etc. Args: (node, method, headers, forObject).
-        // https://stackoverflow.com/questions/16781680/http-get-with-headers-using-resttemplate
+    private fun pTRWHsEHS(headerMap: Map<String, String>, expectedHttpStatus: HttpStatus) {
         val responseEntity =
-            restTemplate.exchange(REGISTER_NODE, HttpMethod.POST, httpEntity, Array<String>::class.java)
-
-        // Expect http status is 406 NOT ACCEPTABLE, and ErrorCode array are same.
-        assertEquals(HttpStatus.NOT_ACCEPTABLE, responseEntity.statusCode)
-        assertArrayEquals(expectedECList, responseEntity.body)
+            restTemplate.exchange(
+                REGISTER_NODE, HttpMethod.POST,
+                headerMap.headersToHttpEntity(), String::class.java
+            )
+        assertEquals(expectedHttpStatus, responseEntity.statusCode)
     }
 
     @Test
     // [A0101, A0102, A0101 + A0102] M1 * 2 + M2.
     fun testWhenMissingField() {
-        pTRWHsE406AECs(mapOf(H_PASSWORD to V_PASSWORD), arrayOf(USER_NAME_IS_NULL))
-        pTRWHsE406AECs(mapOf(H_USERNAME to V_USERNAME), arrayOf(USER_PASSWORD_IS_NULL))
-        pTRWHsE406AECs(mapOf(), arrayOf(USER_NAME_IS_NULL, USER_PASSWORD_IS_NULL))
+        pTRWHsEHS(mapOf(H_PASSWORD to V_PASSWORD), HttpStatus.BAD_REQUEST)
+        pTRWHsEHS(mapOf(H_USERNAME to V_USERNAME), HttpStatus.BAD_REQUEST)
+        pTRWHsEHS(mapOf(), HttpStatus.BAD_REQUEST)
     }
 
     @Test
     // [A0111, A0112, A0111 + A0112] W1 * 2 + W2.
     fun testWhenNotMatchRegex() {
-        pTRWHsE406AECs(mapOf(H_USERNAME to "", H_PASSWORD to V_PASSWORD), arrayOf(USER_NAME_NOT_MATCH_REGEX))
-        pTRWHsE406AECs(mapOf(H_USERNAME to V_USERNAME, H_PASSWORD to ""), arrayOf(USER_PASSWORD_NOT_MATCH_REGEX))
+        pTRWHsE406AECs(mapOf(H_USERNAME to "", H_PASSWORD to V_PASSWORD), listOf(USER_NAME_NOT_MATCH_REGEX))
+        pTRWHsE406AECs(mapOf(H_USERNAME to V_USERNAME, H_PASSWORD to ""), listOf(USER_PASSWORD_NOT_MATCH_REGEX))
         pTRWHsE406AECs(
             mapOf(H_USERNAME to "", H_PASSWORD to ""),
-            arrayOf(USER_NAME_NOT_MATCH_REGEX, USER_PASSWORD_NOT_MATCH_REGEX)
+            listOf(USER_NAME_NOT_MATCH_REGEX, USER_PASSWORD_NOT_MATCH_REGEX)
         )
     }
 
@@ -149,14 +162,14 @@ class UserRegisterDeleteNodeTest {
 
     // Post to delete node with headers and expect HttpStatus.
     private fun pTDWHsAEHS(headerMap: Map<String, String>, expectedHttpStatus: HttpStatus) {
-        val tempMultiValueMap = LinkedMultiValueMap<String, String>()
-        headerMap.forEach { tempMultiValueMap[it.key] = listOf(it.value) }
-        val httpEntity = HttpEntity<String>(tempMultiValueMap)
-
-        val responseEntity = restTemplate.exchange(DELETE_NODE, HttpMethod.POST, httpEntity, String::class.java)
+        val responseEntity = restTemplate.exchange(
+            DELETE_NODE, HttpMethod.POST,
+            headerMap.headersToHttpEntity(), String::class.java
+        )
         assertEquals(expectedHttpStatus, responseEntity.statusCode)
     }
 
+    // -- New node test.
     @Test
     fun testDeleteUser() {
         mockMvc.perform(post(REGISTER_NODE).header(H_USERNAME, V_USERNAME).header(H_PASSWORD, V_PASSWORD))
