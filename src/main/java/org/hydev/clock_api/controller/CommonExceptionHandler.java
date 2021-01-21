@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @RestControllerAdvice
-public class RegistryExceptionHandler {
+public class CommonExceptionHandler {
     @ExceptionHandler(ConstraintViolationException.class)
     // ConstraintViolationException will be wrapped to TransactionSystemException!
     // https://stackoverflow.com/questions/45070642/springboot-doesnt-handle-org-hibernate-exception-constraintviolationexception

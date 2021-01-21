@@ -15,15 +15,16 @@ import org.springframework.web.bind.annotation.RestController;
 
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Pattern;
+import java.util.List;
 
 @Validated
 @RestController
 @RequestMapping("/user")
-public class RegistryController {
+public class UserController {
     private final UserRepository userRepository;
 
     @Autowired
-    public RegistryController(UserRepository userRepository) {
+    public UserController(UserRepository userRepository) {
         this.userRepository = userRepository;
     }
 
@@ -41,7 +42,9 @@ public class RegistryController {
             @RequestHeader String password
     ) {
         // First, spring will check args. If not pass there regex, raise ConstraintViolationException.
-        // Then, the aspect will check username if already exists.
+        // Check if username not exists.
+        if (userRepository.existsByUsername(username))
+            return ResponseEntity.status(HttpStatus.NOT_ACCEPTABLE).body(ErrorCode.USER_NAME_ALREADY_EXISTS);
 
         User user = new User();
         user.setUsername(username);
