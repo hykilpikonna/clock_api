@@ -1,6 +1,7 @@
 package org.hydev.clock_api
 
 import org.hamcrest.Matchers
+import org.hamcrest.Matchers.matchesPattern
 import org.hydev.clock_api.entity.User
 import org.hydev.clock_api.error.ErrorCode.*
 import org.hydev.clock_api.repository.UserRepository
@@ -44,6 +45,7 @@ class UserRegisterDeleteNodeTest {
         private const val TEST_NODE = "/user"
         private const val REGISTER_NODE = "${TEST_NODE}/register"
         private const val DELETE_NODE = "${TEST_NODE}/delete"
+        private const val LOGIN_NODE = "${TEST_NODE}/login"
 
         private const val H_USERNAME = "username"
         private const val V_USERNAME = "vanilla"
@@ -192,6 +194,23 @@ class UserRegisterDeleteNodeTest {
 
                 // And assert user is gone.
                 assertEquals(false, userRepository.existsByUsername(V_USERNAME))
+            }
+    }
+
+    @Test
+    fun testUserLogin() {
+        mockMvc.perform(post(REGISTER_NODE).header(H_USERNAME, V_USERNAME).header(H_PASSWORD, V_PASSWORD))
+            // https://stackoverflow.com/questions/49722217/how-do-i-validate-a-json-field-is-formatted-correctly-using-mockmvcresultmatcher
+            .andExpect(status().isOk)
+            .andExpect(content().string(matchesPattern(R_UUID)))
+            .andDo {
+                // Missing field, username not exists, password not match cases already test in testDeleteUser().
+                // Test successful login cases, status 200 and current user's uuid.
+                mockMvc.perform(post(LOGIN_NODE).header(H_USERNAME, V_USERNAME).header(H_PASSWORD, V_PASSWORD))
+                    .andExpect(status().isOk)
+                    .andExpect(content().string(it.response.contentAsString))
+
+                userRepository.deleteById(it.response.contentAsString)
             }
     }
 }

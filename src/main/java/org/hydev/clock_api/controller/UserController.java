@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import javax.validation.constraints.Pattern;
 import java.util.List;
+import java.util.function.Function;
 
 @Validated
 @RestController
@@ -32,7 +33,7 @@ public class UserController {
     // TODO: This method should be synchronized to avoid race condition.
     // Also, this method should not be private, or else cannot use userRepository.
 
-    // TODO: 2021/1/22 Need a better design! 
+    // TODO: 2021/1/22 Need a better design!
     // Controller Return error code list as List<String>, or return uuid as String.
     @SuppressWarnings("rawtypes")
     public synchronized ResponseEntity register(
@@ -65,16 +66,30 @@ public class UserController {
         return DigestUtils.md5DigestAsHex(beforeMd5.getBytes()).toLowerCase();
     }
 
-    @PostMapping("/delete")
-    public synchronized ResponseEntity<String> delete(@RequestHeader String username, @RequestHeader String password) {
+    // Check username & password.
+    // user not exists -> http 404, password not match -> http 401; all match -> do and return do's result String.
+    private ResponseEntity<String> checkPasswordAndDo(String username, String password,
+                                                      Function<User, String> operation) {
         User user = userRepository.queryByUsername(username);
         if (user == null) return ResponseEntity.notFound().build();
 
-        if (user.getPasswordMd5().equals(userToSaltedMd5(username, password))) {
-            userRepository.delete(user);
-            return ResponseEntity.ok("");
-        }
+        if (!user.getPasswordMd5().equals(userToSaltedMd5(username, password)))
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
 
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("");
+        String result = operation.apply(user);
+        return ResponseEntity.ok(result);
+    }
+
+    @PostMapping("/delete")
+    public synchronized ResponseEntity<String> delete(@RequestHeader String username, @RequestHeader String password) {
+        return checkPasswordAndDo(username, password, user -> {
+            userRepository.delete(user);
+            return "";
+        });
+    }
+
+    @PostMapping("login")
+    public synchronized ResponseEntity<String> login(@RequestHeader String username, @RequestHeader String password) {
+        return checkPasswordAndDo(username, password, user -> userRepository.queryByUsername(username).getUuid());
     }
 }
