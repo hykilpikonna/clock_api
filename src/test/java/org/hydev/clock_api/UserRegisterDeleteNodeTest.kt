@@ -38,6 +38,7 @@ import javax.validation.ConstraintViolationException
 
 // https://spring.io/guides/gs/testing-web/
 @AutoConfigureMockMvc
+// TODO: 2021/1/22 Clean up all Tests!
 class UserRegisterDeleteNodeTest {
     companion object {
         private const val TEST_NODE = "/user"
@@ -95,6 +96,7 @@ class UserRegisterDeleteNodeTest {
 
     @Test
     // [A0101, A0102, A0101 + A0102] M1 * 2 + M2.
+    // When missing field, will return Spring's error message json object with 404 not found.
     fun testWhenMissingField() {
         pTRWHsEHS(mapOf(H_PASSWORD to V_PASSWORD), HttpStatus.BAD_REQUEST)
         pTRWHsEHS(mapOf(H_USERNAME to V_USERNAME), HttpStatus.BAD_REQUEST)
@@ -103,6 +105,7 @@ class UserRegisterDeleteNodeTest {
 
     @Test
     // [A0111, A0112, A0111 + A0112] W1 * 2 + W2.
+    // When some field is empty but not null, will return custom error code json array with 406 not acceptable.
     fun testWhenNotMatchRegex() {
         pTRWHsE406AECs(mapOf(H_USERNAME to "", H_PASSWORD to V_PASSWORD), listOf(USER_NAME_NOT_MATCH_REGEX))
         pTRWHsE406AECs(mapOf(H_USERNAME to V_USERNAME, H_PASSWORD to ""), listOf(USER_PASSWORD_NOT_MATCH_REGEX))
@@ -177,7 +180,9 @@ class UserRegisterDeleteNodeTest {
             .andExpect(content().string(Matchers.matchesPattern(R_UUID)))
             .andDo {
                 // Missing headers, 400 bad request.
+                pTDWHsAEHS(mapOf(), HttpStatus.BAD_REQUEST)
                 pTDWHsAEHS(mapOf(H_USERNAME to ""), HttpStatus.BAD_REQUEST)
+                pTDWHsAEHS(mapOf(V_PASSWORD to ""), HttpStatus.BAD_REQUEST)
                 // Username not exist, 404 not found.
                 pTDWHsAEHS(mapOf(H_USERNAME to "", H_PASSWORD to ""), HttpStatus.NOT_FOUND)
                 // Username exist, but password not match. 401 unauthorized.
