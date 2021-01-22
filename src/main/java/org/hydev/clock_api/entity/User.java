@@ -9,6 +9,7 @@ import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Pattern;
+import java.util.Date;
 
 @Data
 @Entity(name = "users")
@@ -40,4 +41,7 @@ public class User {
     @NotNull(message = ErrorCode.INNER_PASSWORD_MD5_IS_NULL)
     @Pattern(regexp = RE_LOWER_MD5, message = ErrorCode.INNER_PASSWORD_MD5_NOT_MATCH_REGEX)
     private String passwordMd5;
+
+    @NotNull
+    private Date joinDate;
 }

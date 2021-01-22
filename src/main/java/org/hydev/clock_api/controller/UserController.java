@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.validation.constraints.Pattern;
+import java.util.Date;
 import java.util.List;
 import java.util.function.Function;
 
@@ -32,7 +33,7 @@ public class UserController {
      * Register a user to the database.
      *
      * https://www.baeldung.com/spring-rest-http-headers
-     * TODO: This method should be synchronized to avoid race condition.
+     * This method should be synchronized to avoid race condition.
      * Also, this method should not be private, or else cannot use userRepository.
      *
      * TODO: 2021/1/22 Need a better design!
@@ -61,6 +62,7 @@ public class UserController {
         User user = new User();
         user.setUsername(username);
         user.setPasswordMd5(userToSaltedMd5(username, password));
+        user.setJoinDate(new Date());
 
         // After save and flush, uuid field will be generated automatically.
         userRepository.saveAndFlush(user);
@@ -110,7 +112,7 @@ public class UserController {
         });
     }
 
-    @PostMapping("login")
+    @PostMapping("/login")
     public synchronized ResponseEntity<String> login(@RequestHeader String username, @RequestHeader String password) {
         return checkPasswordAndDo(username, password, user -> userRepository.queryByUsername(username).getUuid());
     }
