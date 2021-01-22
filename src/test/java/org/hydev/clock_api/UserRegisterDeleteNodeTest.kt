@@ -122,7 +122,7 @@ class UserRegisterDeleteNodeTest {
                 // Notice: inserted user should be delete.
                 val tempUuid = result.response.contentAsString
                 mockMvc.perform(post(REGISTER_NODE).header(H_USERNAME, V_USERNAME).header(H_PASSWORD, V_PASSWORD))
-                    .andExpect(status().isNotAcceptable)
+                    .andExpect(status().isConflict)
                     .andExpect(content().json(String.format("[\"%s\"]", USER_NAME_ALREADY_EXISTS)))
                 userRepository.deleteById(tempUuid)
             }

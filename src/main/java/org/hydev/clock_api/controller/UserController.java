@@ -13,7 +13,6 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Pattern;
 import java.util.List;
 
@@ -32,7 +31,11 @@ public class UserController {
     // https://www.baeldung.com/spring-rest-http-headers
     // TODO: This method should be synchronized to avoid race condition.
     // Also, this method should not be private, or else cannot use userRepository.
-    public synchronized ResponseEntity<String> register(
+
+    // TODO: 2021/1/22 Need a better design! 
+    // Controller Return error code list as List<String>, or return uuid as String.
+    @SuppressWarnings("rawtypes")
+    public synchronized ResponseEntity register(
             // username & password shouldn't be null, and should match thr regex.
             // [!] @RequestHeader(required = false) makes no need make another error handler.
             // [!] And also, ExceptionHandler of MissingRequestHeaderException cannot deal with all missing fields.
@@ -42,9 +45,10 @@ public class UserController {
             @RequestHeader String password
     ) {
         // First, spring will check args. If not pass there regex, raise ConstraintViolationException.
-        // Check if username not exists.
+        // Then, we check if username not exists. If username already exists, return ErrorCode with 409 conflict.
         if (userRepository.existsByUsername(username))
-            return ResponseEntity.status(HttpStatus.NOT_ACCEPTABLE).body(ErrorCode.USER_NAME_ALREADY_EXISTS);
+            // TODO: 2021/1/22 Using library instead of hand make.
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(List.of(ErrorCode.USER_NAME_ALREADY_EXISTS));
 
         User user = new User();
         user.setUsername(username);
