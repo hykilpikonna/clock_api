@@ -1,6 +1,7 @@
 package org.hydev.clock_api.entity;
 
 import lombok.Data;
+import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.GenericGenerator;
 import org.hydev.clock_api.error.ErrorCode;
 
@@ -9,6 +10,7 @@ import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Pattern;
+import java.time.LocalDateTime;
 import java.util.Date;
 
 @Data
@@ -42,6 +44,7 @@ public class User {
     @Pattern(regexp = RE_LOWER_MD5, message = ErrorCode.INNER_PASSWORD_MD5_NOT_MATCH_REGEX)
     private String passwordMd5;
 
-    @NotNull
-    private Date joinDate;
+    // https://stackoverflow.com/questions/8202154/how-to-create-an-auto-generated-date-timestamp-field-in-a-play-jpa/8207652
+    @CreationTimestamp
+    private LocalDateTime joinDate;
 }

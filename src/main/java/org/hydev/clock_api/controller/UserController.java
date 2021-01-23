@@ -62,7 +62,6 @@ public class UserController {
         User user = new User();
         user.setUsername(username);
         user.setPasswordMd5(userToSaltedMd5(username, password));
-        user.setJoinDate(new Date());
 
         // After save and flush, uuid field will be generated automatically.
         userRepository.saveAndFlush(user);
