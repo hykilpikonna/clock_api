@@ -74,3 +74,7 @@ compileTestKotlin {
         jvmTarget = "11"
     }
 }
+
+bootJar {
+    archiveFileName = "${archiveBaseName.get()}.${archiveExtension.get()}"
+}
