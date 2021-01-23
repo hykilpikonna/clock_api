@@ -9,4 +9,3 @@ rm -f ./build/libs/*
 gradle bootJar
 scp ./build/libs/clock_api.jar $HOST:/app/depl/clock-api
 ssh $HOST "systemctl restart clock-api"
-

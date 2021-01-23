@@ -14,7 +14,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.validation.constraints.Pattern;
-import java.util.Date;
 import java.util.List;
 import java.util.function.Function;
 
@@ -30,12 +29,25 @@ public class UserController {
     }
 
     /**
-     * Register a user to the database.
+     * Create salted hash for user's password
+     * Format: "$username + $password".toLowerMd5();
      *
+     * @param username Unique username used as a salt
+     * @param password Password initial hash
+     * @return Salted hash
+     */
+    private static String userToSaltedMd5(String username, String password) {
+        String beforeMd5 = String.format("%s + %s", username, password);
+        return DigestUtils.md5DigestAsHex(beforeMd5.getBytes()).toLowerCase();
+    }
+
+    /**
+     * Register a user to the database.
+     * <p>
      * https://www.baeldung.com/spring-rest-http-headers
      * This method should be synchronized to avoid race condition.
      * Also, this method should not be private, or else cannot use userRepository.
-     *
+     * <p>
      * TODO: 2021/1/22 Need a better design!
      * Controller Return error code list as List<String>, or return uuid as String.
      *
@@ -69,26 +81,13 @@ public class UserController {
     }
 
     /**
-     * Create salted hash for user's password
-     * Format: "$username + $password".toLowerMd5();
-     *
-     * @param username Unique username used as a salt
-     * @param password Password initial hash
-     * @return Salted hash
-     */
-    private static String userToSaltedMd5(String username, String password) {
-        String beforeMd5 = String.format("%s + %s", username, password);
-        return DigestUtils.md5DigestAsHex(beforeMd5.getBytes()).toLowerCase();
-    }
-
-    /**
      * Check username & password.
      * - User doesn't exist -> http 404
      * - Password doesn't match -> http 401
      * - All match -> Execute operation and return the resulting String.
      *
-     * @param username Unique username
-     * @param password Password initial hash
+     * @param username  Unique username
+     * @param password  Password initial hash
      * @param operation Callback on success
      * @return Callback result or the error response
      */

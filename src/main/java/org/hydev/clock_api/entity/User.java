@@ -11,7 +11,6 @@ import javax.persistence.Id;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Pattern;
 import java.time.LocalDateTime;
-import java.util.Date;
 
 @Data
 @Entity(name = "users")
