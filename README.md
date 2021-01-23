@@ -2,7 +2,7 @@
 
 ### Setup environment
 
-1. Install Java `dnf install java-11-openjdk-devel` (And add an alias to your `.bashrc`)
+1. Install Java 11 JDK (And add an alias to your `.bashrc`)
 
 ```shell
 alias java11='/usr/lib/jvm/jre-11/bin/java'

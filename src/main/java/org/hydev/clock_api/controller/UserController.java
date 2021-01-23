@@ -71,6 +71,7 @@ public class UserController {
 
     /**
      * Create salted hash for user's password
+     * Format: "$username + $password".toLowerMd5();
      *
      * @param username Unique username used as a salt
      * @param password Password initial hash
