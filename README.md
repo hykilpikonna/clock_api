@@ -40,6 +40,7 @@ WantedBy=multi-user.target
 groupadd -r appmgr
 sudo useradd -r -s /bin/false -g appmgr jvmapps
 id jvmapps
+chown -R jvmapps:appmgr /app/depl/clock-api
 ```
 
 7. Run `deploy.sh` in your local machine (Don't forget to change `HOST`)
