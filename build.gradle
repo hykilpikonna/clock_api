@@ -57,6 +57,9 @@ dependencies {
 
     // Spring Security.
     // implementation 'org.springframework.boot:spring-boot-starter-security'
+
+    // Kotlin support
+    implementation "org.jetbrains.kotlin:kotlin-reflect:1.4.21"
 }
 
 test {

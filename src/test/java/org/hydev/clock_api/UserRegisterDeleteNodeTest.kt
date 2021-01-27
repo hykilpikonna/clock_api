@@ -1,6 +1,5 @@
 package org.hydev.clock_api
 
-import org.hamcrest.Matchers
 import org.hamcrest.Matchers.matchesPattern
 import org.hydev.clock_api.entity.User
 import org.hydev.clock_api.error.ErrorCode.*
@@ -122,7 +121,7 @@ class UserRegisterDeleteNodeTest {
     fun testWhenUserAlreadyExists() {
         mockMvc.perform(post(REGISTER_NODE).header(H_USERNAME, V_USERNAME).header(H_PASSWORD, V_PASSWORD))
             .andExpect(status().isOk)
-            .andExpect(content().string(Matchers.matchesPattern(R_UUID)))
+            .andExpect(content().string(matchesPattern(R_UUID)))
             .andDo { result: MvcResult ->
                 // Notice: inserted user should be delete.
                 val tempUuid = result.response.contentAsString
@@ -179,7 +178,7 @@ class UserRegisterDeleteNodeTest {
     fun testDeleteUser() {
         mockMvc.perform(post(REGISTER_NODE).header(H_USERNAME, V_USERNAME).header(H_PASSWORD, V_PASSWORD))
             .andExpect(status().isOk)
-            .andExpect(content().string(Matchers.matchesPattern(R_UUID)))
+            .andExpect(content().string(matchesPattern(R_UUID)))
             .andDo {
                 // Missing headers, 400 bad request.
                 pTDWHsAEHS(mapOf(), HttpStatus.BAD_REQUEST)
